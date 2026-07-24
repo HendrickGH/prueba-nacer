@@ -14,6 +14,13 @@ export interface RepoInfo {
   updatedAt: string;
 }
 
+export interface PaginationMeta {
+  currentPage: number;
+  perPage: number;
+  totalPages: number;
+  totalRepos: number;
+}
+
 export interface UserProfile {
   username: string;
   name: string | null;
@@ -29,12 +36,16 @@ export interface UserProfile {
   following: number;
   createdAt: string;
   repositories: RepoInfo[];
+  pagination: PaginationMeta;
 }
 
 @Injectable()
 export class UserService {
-  async getGithubProfile(username: string): Promise<UserProfile> {
+  async getGithubProfile(username: string, pageNum: number = 1, perPageNum: number = 8): Promise<UserProfile> {
     try {
+      const page = Math.max(1, pageNum);
+      const perPage = Math.max(1, Math.min(100, perPageNum));
+
       const headers = {
         'User-Agent': 'NestJS-GitHub-Profile-App',
         'Accept': 'application/vnd.github+json',
@@ -42,7 +53,10 @@ export class UserService {
 
       const [userRes, reposRes] = await Promise.all([
         fetch(`https://api.github.com/users/${encodeURIComponent(username)}`, { headers }),
-        fetch(`https://api.github.com/users/${encodeURIComponent(username)}/repos?sort=updated&per_page=10`, { headers }),
+        fetch(
+          `https://api.github.com/users/${encodeURIComponent(username)}/repos?sort=updated&per_page=${perPage}&page=${page}`,
+          { headers },
+        ),
       ]);
 
       if (userRes.status === 404) {
@@ -78,6 +92,9 @@ export class UserService {
         }
       }
 
+      const totalRepos = userData.public_repos || 0;
+      const totalPages = Math.ceil(totalRepos / perPage) || 1;
+
       return {
         username: userData.login,
         name: userData.name || null,
@@ -93,6 +110,12 @@ export class UserService {
         following: userData.following,
         createdAt: userData.created_at,
         repositories: reposData,
+        pagination: {
+          currentPage: page,
+          perPage,
+          totalPages,
+          totalRepos,
+        },
       };
     } catch (error) {
       if (error instanceof HttpException) {
