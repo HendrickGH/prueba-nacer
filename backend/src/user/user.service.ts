@@ -39,16 +39,50 @@ export interface UserProfile {
   pagination: PaginationMeta;
 }
 
+interface GitHubUserRaw {
+  login: string;
+  name: string | null;
+  avatar_url: string;
+  html_url: string;
+  bio: string | null;
+  location: string | null;
+  company: string | null;
+  blog: string | null;
+  public_repos: number;
+  public_gists: number;
+  followers: number;
+  following: number;
+  created_at: string;
+}
+
+interface GitHubRepoRaw {
+  name: string;
+  description: string | null;
+  html_url: string;
+  language: string | null;
+  stargazers_count: number;
+  forks_count: number;
+  open_issues_count?: number;
+  default_branch?: string;
+  topics?: string[];
+  homepage?: string | null;
+  updated_at: string;
+}
+
 @Injectable()
 export class UserService {
-  async getGithubProfile(username: string, pageNum: number = 1, perPageNum: number = 8): Promise<UserProfile> {
+  async getGithubProfile(
+    username: string,
+    pageNum: number = 1,
+    perPageNum: number = 8,
+  ): Promise<UserProfile> {
     try {
       const page = Math.max(1, pageNum);
       const perPage = Math.max(1, Math.min(100, perPageNum));
 
       const headers: Record<string, string> = {
         'User-Agent': 'NestJS-GitHub-Profile-App',
-        'Accept': 'application/vnd.github+json',
+        Accept: 'application/vnd.github+json',
       };
 
       if (process.env.GITHUB_TOKEN) {
@@ -56,7 +90,9 @@ export class UserService {
       }
 
       const [userRes, reposRes] = await Promise.all([
-        fetch(`https://api.github.com/users/${encodeURIComponent(username)}`, { headers }),
+        fetch(`https://api.github.com/users/${encodeURIComponent(username)}`, {
+          headers,
+        }),
         fetch(
           `https://api.github.com/users/${encodeURIComponent(username)}/repos?sort=updated&per_page=${perPage}&page=${page}`,
           { headers },
@@ -74,13 +110,13 @@ export class UserService {
         );
       }
 
-      const userData = await userRes.json();
+      const userData = (await userRes.json()) as GitHubUserRaw;
       let reposData: RepoInfo[] = [];
 
       if (reposRes.ok) {
-        const rawRepos = await reposRes.json();
+        const rawRepos = (await reposRes.json()) as GitHubRepoRaw[];
         if (Array.isArray(rawRepos)) {
-          reposData = rawRepos.map((repo: any) => ({
+          reposData = rawRepos.map((repo: GitHubRepoRaw) => ({
             name: repo.name,
             description: repo.description || null,
             htmlUrl: repo.html_url,

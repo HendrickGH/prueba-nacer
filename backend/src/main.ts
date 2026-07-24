@@ -11,6 +11,8 @@ async function bootstrap() {
 
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 4000;
   await app.listen(port);
-  console.log(`NestJS server running in ${process.env.NODE_ENV || 'development'} mode on port ${port}`);
+  console.log(
+    `NestJS server running in ${process.env.NODE_ENV || 'development'} mode on port ${port}`,
+  );
 }
-bootstrap();
+void bootstrap();
