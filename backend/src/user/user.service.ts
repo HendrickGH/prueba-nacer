@@ -46,10 +46,14 @@ export class UserService {
       const page = Math.max(1, pageNum);
       const perPage = Math.max(1, Math.min(100, perPageNum));
 
-      const headers = {
+      const headers: Record<string, string> = {
         'User-Agent': 'NestJS-GitHub-Profile-App',
         'Accept': 'application/vnd.github+json',
       };
+
+      if (process.env.GITHUB_TOKEN) {
+        headers['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`;
+      }
 
       const [userRes, reposRes] = await Promise.all([
         fetch(`https://api.github.com/users/${encodeURIComponent(username)}`, { headers }),
