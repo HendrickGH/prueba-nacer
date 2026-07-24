@@ -7,6 +7,10 @@ export interface RepoInfo {
   language: string | null;
   stargazersCount: number;
   forksCount: number;
+  openIssuesCount: number;
+  defaultBranch: string;
+  topics: string[];
+  homepage: string | null;
   updatedAt: string;
 }
 
@@ -38,7 +42,7 @@ export class UserService {
 
       const [userRes, reposRes] = await Promise.all([
         fetch(`https://api.github.com/users/${encodeURIComponent(username)}`, { headers }),
-        fetch(`https://api.github.com/users/${encodeURIComponent(username)}/repos?sort=updated&per_page=6`, { headers }),
+        fetch(`https://api.github.com/users/${encodeURIComponent(username)}/repos?sort=updated&per_page=10`, { headers }),
       ]);
 
       if (userRes.status === 404) {
@@ -65,6 +69,10 @@ export class UserService {
             language: repo.language || null,
             stargazersCount: repo.stargazers_count,
             forksCount: repo.forks_count,
+            openIssuesCount: repo.open_issues_count || 0,
+            defaultBranch: repo.default_branch || 'main',
+            topics: Array.isArray(repo.topics) ? repo.topics : [],
+            homepage: repo.homepage || null,
             updatedAt: repo.updated_at,
           }));
         }
