@@ -9,6 +9,10 @@ interface RepoInfo {
   language: string | null;
   stargazersCount: number;
   forksCount: number;
+  openIssuesCount: number;
+  defaultBranch: string;
+  topics: string[];
+  homepage: string | null;
   updatedAt: string;
 }
 
@@ -32,7 +36,6 @@ interface UserProfile {
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
 
 export default function Home() {
-  const [username, setUsername] = useState<string>("HendrickGH");
   const [searchQuery, setSearchQuery] = useState<string>("HendrickGH");
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -51,7 +54,6 @@ export default function Home() {
       }
       const data: UserProfile = await response.json();
       setProfile(data);
-      setUsername(data.username);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -92,9 +94,6 @@ export default function Home() {
     <main className="container">
       <header className="header">
         <h1 className="header-title">GitHub Profile Explorer</h1>
-        <p className="header-subtitle">
-          Powered by NestJS backend endpoint <code>GET /user/:username</code>
-        </p>
       </header>
 
       <form onSubmit={handleSearch} className="search-form">
@@ -114,7 +113,7 @@ export default function Home() {
       {loading && (
         <div className="state-container">
           <div className="loading-spinner"></div>
-          <p className="error-message">Fetching profile data from NestJS endpoint...</p>
+          <p className="error-message">Fetching profile data...</p>
         </div>
       )}
 
@@ -269,25 +268,67 @@ export default function Home() {
 
           {profile.repositories && profile.repositories.length > 0 && (
             <div className="repos-section">
-              <h3 className="section-title">Recent Repositories</h3>
-              <div className="repos-grid">
+              <h3 className="section-title">Public Repositories</h3>
+              <div className="repos-list">
                 {profile.repositories.map((repo) => (
-                  <a
-                    key={repo.name}
-                    href={repo.htmlUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="repo-card"
-                  >
-                    <div className="repo-header">
-                      <span className="repo-name">{repo.name}</span>
+                  <article key={repo.name} className="repo-card-full">
+                    <div className="repo-card-header">
+                      <div className="repo-title-row">
+                        <a
+                          href={repo.htmlUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="repo-name-link"
+                        >
+                          <svg
+                            className="detail-icon"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                            />
+                          </svg>
+                          {repo.name}
+                        </a>
+                        <span className="repo-updated">
+                          Updated {formatDate(repo.updatedAt)}
+                        </span>
+                      </div>
                       {repo.description && (
                         <p className="repo-desc">{repo.description}</p>
                       )}
                     </div>
-                    <div className="repo-meta">
-                      {repo.language && <span>{repo.language}</span>}
-                      <span className="repo-badge">
+
+                    {repo.topics && repo.topics.length > 0 && (
+                      <div className="repo-topics">
+                        {repo.topics.map((topic) => (
+                          <span key={topic} className="topic-chip">
+                            {topic}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="repo-info-footer">
+                      {repo.language && (
+                        <span className="repo-meta-item">
+                          <svg
+                            className="detail-icon"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle cx="12" cy="12" r="6" />
+                          </svg>
+                          {repo.language}
+                        </span>
+                      )}
+
+                      <span className="repo-meta-item">
                         <svg
                           className="detail-icon"
                           fill="currentColor"
@@ -295,9 +336,10 @@ export default function Home() {
                         >
                           <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.784 1.399 8.165L12 18.896l-7.333 3.863 1.399-8.165-5.934-5.784 8.2-1.192z" />
                         </svg>
-                        {repo.stargazersCount}
+                        {repo.stargazersCount} stars
                       </span>
-                      <span className="repo-badge">
+
+                      <span className="repo-meta-item">
                         <svg
                           className="detail-icon"
                           fill="none"
@@ -311,10 +353,44 @@ export default function Home() {
                             d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
                           />
                         </svg>
-                        {repo.forksCount}
+                        {repo.forksCount} forks
+                      </span>
+
+                      <span className="repo-meta-item">
+                        <svg
+                          className="detail-icon"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        {repo.openIssuesCount} issues
+                      </span>
+
+                      <span className="repo-meta-item">
+                        <svg
+                          className="detail-icon"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
+                          />
+                        </svg>
+                        {repo.defaultBranch}
                       </span>
                     </div>
-                  </a>
+                  </article>
                 ))}
               </div>
             </div>
