@@ -43,6 +43,19 @@ interface UserProfile {
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
 
+async function fetchProfileData(targetUsername: string, pageNum: number = 1): Promise<UserProfile> {
+  const response = await fetch(
+    `${BACKEND_URL}/user/${encodeURIComponent(targetUsername)}?page=${pageNum}&perPage=8`
+  );
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error(`GitHub user "${targetUsername}" not found.`);
+    }
+    throw new Error(`Failed to fetch profile: ${response.statusText}`);
+  }
+  return (await response.json()) as UserProfile;
+}
+
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState<string>("HendrickGH");
   const [activeUsername, setActiveUsername] = useState<string>("HendrickGH");
@@ -55,16 +68,7 @@ export default function Home() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(
-        `${BACKEND_URL}/user/${encodeURIComponent(targetUsername)}?page=${pageNum}&perPage=8`
-      );
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error(`GitHub user "${targetUsername}" not found.`);
-        }
-        throw new Error(`Failed to fetch profile: ${response.statusText}`);
-      }
-      const data: UserProfile = await response.json();
+      const data = await fetchProfileData(targetUsername, pageNum);
       setProfile(data);
       setActiveUsername(targetUsername);
       setCurrentPage(pageNum);
@@ -81,7 +85,35 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchProfile("HendrickGH", 1);
+    let isMounted = true;
+    fetchProfileData("HendrickGH", 1)
+      .then((data) => {
+        if (isMounted) {
+          setProfile(data);
+          setActiveUsername("HendrickGH");
+          setCurrentPage(1);
+          setError(null);
+        }
+      })
+      .catch((err: unknown) => {
+        if (isMounted) {
+          if (err instanceof Error) {
+            setError(err.message);
+          } else {
+            setError("An unexpected error occurred.");
+          }
+          setProfile(null);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleSearch = (e: FormEvent) => {
