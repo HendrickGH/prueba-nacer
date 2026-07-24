@@ -67,7 +67,7 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchProfile("HendrickGH");
+    Promise.resolve().then(() => fetchProfile("HendrickGH"));
   }, []);
 
   const handleSearch = (e: FormEvent) => {
