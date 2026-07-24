@@ -267,10 +267,23 @@ a:hover {
   padding-top: 1.5rem;
 }
 
+.repos-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .section-title {
   font-size: 1.2rem;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.repos-count-badge {
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }
 
 /* Full Width Repository Cards Stack */
@@ -366,6 +379,49 @@ a:hover {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+}
+
+/* Pagination Bar */
+.pagination-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.pagination-button {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.85rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pagination-button:hover:not(:disabled) {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.pagination-button.active {
+  background-color: var(--accent-color);
+  color: #0f172a;
+  border-color: var(--accent-color);
+  font-weight: 700;
+}
+
+.pagination-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .state-container {

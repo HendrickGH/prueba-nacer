@@ -16,6 +16,13 @@ interface RepoInfo {
   updatedAt: string;
 }
 
+interface PaginationMeta {
+  currentPage: number;
+  perPage: number;
+  totalPages: number;
+  totalRepos: number;
+}
+
 interface UserProfile {
   username: string;
   name: string | null;
@@ -31,21 +38,26 @@ interface UserProfile {
   following: number;
   createdAt: string;
   repositories?: RepoInfo[];
+  pagination?: PaginationMeta;
 }
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState<string>("HendrickGH");
+  const [activeUsername, setActiveUsername] = useState<string>("HendrickGH");
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchProfile = async (targetUsername: string) => {
+  const fetchProfile = async (targetUsername: string, pageNum: number = 1) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${BACKEND_URL}/user/${encodeURIComponent(targetUsername)}`);
+      const response = await fetch(
+        `${BACKEND_URL}/user/${encodeURIComponent(targetUsername)}?page=${pageNum}&perPage=8`
+      );
       if (!response.ok) {
         if (response.status === 404) {
           throw new Error(`GitHub user "${targetUsername}" not found.`);
@@ -54,6 +66,8 @@ export default function Home() {
       }
       const data: UserProfile = await response.json();
       setProfile(data);
+      setActiveUsername(targetUsername);
+      setCurrentPage(pageNum);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -67,13 +81,19 @@ export default function Home() {
   };
 
   useEffect(() => {
-    Promise.resolve().then(() => fetchProfile("HendrickGH"));
+    fetchProfile("HendrickGH", 1);
   }, []);
 
   const handleSearch = (e: FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      fetchProfile(searchQuery.trim());
+      fetchProfile(searchQuery.trim(), 1);
+    }
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (profile?.pagination && newPage >= 1 && newPage <= profile.pagination.totalPages) {
+      fetchProfile(activeUsername, newPage);
     }
   };
 
@@ -268,7 +288,15 @@ export default function Home() {
 
           {profile.repositories && profile.repositories.length > 0 && (
             <div className="repos-section">
-              <h3 className="section-title">Public Repositories</h3>
+              <div className="repos-header-row">
+                <h3 className="section-title">Public Repositories</h3>
+                {profile.pagination && (
+                  <span className="repos-count-badge">
+                    Page {profile.pagination.currentPage} of {profile.pagination.totalPages} ({profile.pagination.totalRepos} repos)
+                  </span>
+                )}
+              </div>
+
               <div className="repos-list">
                 {profile.repositories.map((repo) => (
                   <article key={repo.name} className="repo-card-full">
@@ -393,6 +421,44 @@ export default function Home() {
                   </article>
                 ))}
               </div>
+
+              {profile.pagination && profile.pagination.totalPages > 1 && (
+                <div className="pagination-container">
+                  <button
+                    type="button"
+                    className="pagination-button"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage <= 1}
+                  >
+                    Previous
+                  </button>
+
+                  {Array.from(
+                    { length: profile.pagination.totalPages },
+                    (_, index) => index + 1
+                  ).map((pageNum) => (
+                    <button
+                      key={pageNum}
+                      type="button"
+                      className={`pagination-button ${
+                        pageNum === currentPage ? "active" : ""
+                      }`}
+                      onClick={() => handlePageChange(pageNum)}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    className="pagination-button"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage >= profile.pagination.totalPages}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </section>
