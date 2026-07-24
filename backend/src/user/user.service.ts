@@ -1,5 +1,15 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 
+export interface RepoInfo {
+  name: string;
+  description: string | null;
+  htmlUrl: string;
+  language: string | null;
+  stargazersCount: number;
+  forksCount: number;
+  updatedAt: string;
+}
+
 export interface UserProfile {
   username: string;
   name: string | null;
@@ -14,46 +24,67 @@ export interface UserProfile {
   followers: number;
   following: number;
   createdAt: string;
+  repositories: RepoInfo[];
 }
 
 @Injectable()
 export class UserService {
   async getGithubProfile(username: string): Promise<UserProfile> {
     try {
-      const response = await fetch(`https://api.github.com/users/${encodeURIComponent(username)}`, {
-        headers: {
-          'User-Agent': 'NestJS-GitHub-Profile-App',
-          'Accept': 'application/vnd.github+json',
-        },
-      });
+      const headers = {
+        'User-Agent': 'NestJS-GitHub-Profile-App',
+        'Accept': 'application/vnd.github+json',
+      };
 
-      if (response.status === 404) {
+      const [userRes, reposRes] = await Promise.all([
+        fetch(`https://api.github.com/users/${encodeURIComponent(username)}`, { headers }),
+        fetch(`https://api.github.com/users/${encodeURIComponent(username)}/repos?sort=updated&per_page=6`, { headers }),
+      ]);
+
+      if (userRes.status === 404) {
         throw new HttpException('GitHub user not found', HttpStatus.NOT_FOUND);
       }
 
-      if (!response.ok) {
+      if (!userRes.ok) {
         throw new HttpException(
-          `Failed to fetch GitHub profile: ${response.statusText}`,
+          `Failed to fetch GitHub profile: ${userRes.statusText}`,
           HttpStatus.BAD_REQUEST,
         );
       }
 
-      const data = await response.json();
+      const userData = await userRes.json();
+      let reposData: RepoInfo[] = [];
+
+      if (reposRes.ok) {
+        const rawRepos = await reposRes.json();
+        if (Array.isArray(rawRepos)) {
+          reposData = rawRepos.map((repo: any) => ({
+            name: repo.name,
+            description: repo.description || null,
+            htmlUrl: repo.html_url,
+            language: repo.language || null,
+            stargazersCount: repo.stargazers_count,
+            forksCount: repo.forks_count,
+            updatedAt: repo.updated_at,
+          }));
+        }
+      }
 
       return {
-        username: data.login,
-        name: data.name || null,
-        avatarUrl: data.avatar_url,
-        profileUrl: data.html_url,
-        bio: data.bio || null,
-        location: data.location || null,
-        company: data.company || null,
-        blog: data.blog || null,
-        publicRepos: data.public_repos,
-        publicGists: data.public_gists,
-        followers: data.followers,
-        following: data.following,
-        createdAt: data.created_at,
+        username: userData.login,
+        name: userData.name || null,
+        avatarUrl: userData.avatar_url,
+        profileUrl: userData.html_url,
+        bio: userData.bio || null,
+        location: userData.location || null,
+        company: userData.company || null,
+        blog: userData.blog || null,
+        publicRepos: userData.public_repos,
+        publicGists: userData.public_gists,
+        followers: userData.followers,
+        following: userData.following,
+        createdAt: userData.created_at,
+        repositories: reposData,
       };
     } catch (error) {
       if (error instanceof HttpException) {
